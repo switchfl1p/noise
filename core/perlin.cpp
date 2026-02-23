@@ -5,14 +5,48 @@
 Perlin::Perlin(int seed) : perm_table(genPermTable(seed)){};
 
 float Perlin::perlin2D(float x, float y){
-    //find which grid cell we're in
-    // permutation table size is 256 (2^8), so masking with 255 wraps index
-    int cell_x = (int)glm::floor(x) & 255;
-    int cell_y = (int)glm::floor(y) & 255;
+    //get the floor values
+    int floor_x = (int)glm::floor(x);
+    int floor_y = (int)glm::floor(y);
 
-    //find local position within that grid cell
-    float local_x = x - cell_x;
-    float local_y = y - cell_y;
+    //find which grid cell we're in
+    //permutation table size is 256 (2^8), so masking with 255 wraps index
+    int cell_x = floor_x & 255;
+    int cell_y = floor_y & 255;
+
+    //find local position within the grid cell
+    float local_x = x - floor_x;
+    float local_y = y - floor_y;
+
+    //get the gradient vector for each of the 4 corners
+    glm::vec2 grad_TL = getGradient(cell_x, cell_y + 1);
+    glm::vec2 grad_TR = getGradient(cell_x + 1, cell_y + 1);
+    glm::vec2 grad_BL = getGradient(cell_x, cell_y);
+    glm::vec2 grad_BR = getGradient(cell_x + 1, cell_y);
+
+    //the 4 corner to point vectors
+    glm::vec2 vec_TL(local_x, local_y - 1);
+    glm::vec2 vec_TR(local_x - 1, local_y - 1);
+    glm::vec2 vec_BL(local_x, local_y);
+    glm::vec2 vec_BR(local_x - 1, local_y); 
+
+    //calculate the dot products
+    float dot_TL = glm::dot(grad_TL, vec_TL);
+    float dot_TR = glm::dot(grad_TR, vec_TR);
+    float dot_BL = glm::dot(grad_BL, vec_BL);
+    float dot_BR = glm::dot(grad_BR, vec_BR);
+
+    //apply the fade curve to smooth out local coordinates
+    float u = fade(local_x);
+    float v = fade(local_y);
+
+    //interpolate between the 4 dot products
+    //first between the bottom and top edges then interpolate those results vertically
+    float bottom = glm::mix(dot_BL, dot_BR, u);
+    float top = glm::mix(dot_TL, dot_TR, u);
+    float result = glm::mix(bottom, top, v);
+
+    return result;
 }
 
 std::array<int, 512> Perlin::genPermTable(int seed){
@@ -48,42 +82,7 @@ void Perlin::reseed(int seed){
     perm_table = genPermTable(seed);
 }
 
-/*
-function perlin(x, y):
-
-    # STEP 1: Find which grid cell we're in
-    cellX = floor(x)
-    cellY = floor(y)
-
-    # STEP 2: Find our position within that cell (0 to 1)
-    localX = x - cellX
-    localY = y - cellY
-
-    # STEP 3: Get the gradient vector for each of the 4 corners
-    # you use a permutation table here to look up a gradient
-    # based on the corner's integer coordinates
-    gradTL = getGradient(cellX,     cellY + 1)
-    gradTR = getGradient(cellX + 1, cellY + 1)
-    gradBL = getGradient(cellX,     cellY)
-    gradBR = getGradient(cellX + 1, cellY)
-
-    # STEP 4: Compute the vector from each corner to our point
-    # then dot it with that corner's gradient
-    dotTL = dot(gradTL, (localX,     localY - 1))
-    dotTR = dot(gradTR, (localX - 1, localY - 1))
-    dotBL = dot(gradBL, (localX,     localY))
-    dotBR = dot(gradBR, (localX - 1, localY))
-
-    # STEP 5: Apply the fade curve to smooth the local coordinates
-    u = fade(localX)
-    v = fade(localY)
-
-    # STEP 6: Interpolate between the 4 dot products
-    # first interpolate along the bottom and top edges
-    # then interpolate between those two results vertically
-    bottom = lerp(dotBL, dotBR, u)
-    top    = lerp(dotTL, dotTR, u)
-    result = lerp(bottom, top, v)
-
-    return result 
-*/
+//improved Perlin noise fade function using Horner method for efficiency
+float Perlin::fade(float t){
+    return t * t * t * (t * (t * 6 - 15) + 10);
+}
