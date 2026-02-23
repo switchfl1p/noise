@@ -6,8 +6,9 @@ Perlin::Perlin(int seed) : perm_table(genPermTable(seed)){};
 
 float Perlin::perlin2D(float x, float y){
     //find which grid cell we're in
-    int cell_x = glm::floor(x);
-    int cell_y = glm::floor(y);
+    // permutation table size is 256 (2^8), so masking with 255 wraps index
+    int cell_x = (int)glm::floor(x) & 255;
+    int cell_y = (int)glm::floor(y) & 255;
 
     //find local position within that grid cell
     float local_x = x - cell_x;
@@ -36,7 +37,11 @@ std::array<int, 512> Perlin::genPermTable(int seed){
 }
 
 glm::vec2 Perlin::getGradient(int x, int y){
+    int gradient_index = perm_table[perm_table[x] + y];
 
+    glm::vec2 gradient = gradients[gradient_index%gradients.size()];
+
+    return gradient;
 }
 
 void Perlin::reseed(int seed){
