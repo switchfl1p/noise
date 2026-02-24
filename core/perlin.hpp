@@ -4,8 +4,8 @@
 class Perlin{
     public:
         Perlin(int seed);
-        float perlin2D(float x, float y);
         void reseed(int seed);
+        std::vector<std::vector<float>> generateHeightMap(int size_x, int size_z, float scale);
     
     private:
         std::array<int, 512> perm_table;
@@ -24,4 +24,5 @@ class Perlin{
         glm::vec2 getGradient(int x, int y);
         std::array<int, 512> genPermTable(int seed);
         float fade(float t);
+        float perlin2D(float x, float y);
 };
